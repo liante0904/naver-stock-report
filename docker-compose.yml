@@ -1,0 +1,10 @@
+services:
+  report-bot:
+    build: .
+    image: naver-stock-report-bot:latest
+    container_name: naver-stock-report-bot
+    restart: always
+    env_file: .env
+    volumes:
+      - ~/sqlite3:/app/db
+      - ~/log:/app/log
