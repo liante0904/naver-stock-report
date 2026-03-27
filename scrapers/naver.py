@@ -155,24 +155,24 @@ class NaverReportScraper:
             
             for report in unsent:
                 # 1. DB에 이미 PDF 링크가 있는지 확인
-                display_url = report.get('attach_url')
+                display_url = report.get('PDF_URL')
                 
                 # 2. 없다면 실제 상세 페이지 방문하여 파싱 후 DB 업데이트
                 if not display_url:
-                    display_url = await self._parse_pdf_url(session, report['url'])
+                    display_url = await self._parse_pdf_url(session, report['URL'])
                     if display_url:
-                        self.db.update_report_attach_url(report['id'], display_url)
-                        logger.info(f"PDF URL 업데이트됨: {report['id']} -> {display_url}")
+                        self.db.update_report_pdf_url(report['ID'], display_url)
+                        logger.info(f"PDF URL 업데이트됨: {report['ID']} -> {display_url}")
                     else:
-                        display_url = report['url'] # PDF 추출 실패 시 원문 상세 페이지 유지
+                        display_url = report['URL'] # PDF 추출 실패 시 원문 상세 페이지 유지
                 
                 # HTML 이스케이프 및 메시지 조립
-                esc_title = html.escape(report['title'])
+                esc_title = html.escape(report['TITLE'])
                 
                 content = ""
-                if last_broker != report['broker']:
-                    content += f"●<b>{html.escape(report['broker'])}</b>\n"
-                    last_broker = report['broker']
+                if last_broker != report['BROKER']:
+                    content += f"●<b>{html.escape(report['BROKER'])}</b>\n"
+                    last_broker = report['BROKER']
                 
                 content += f"{esc_title}\n👉<a href='{display_url}'>링크</a>\n\n"
                 
@@ -188,7 +188,7 @@ class NaverReportScraper:
                     last_broker = None  # 새 메시지 시작 시 증권사 명칭 다시 표시
 
                 send_buffer += content
-                sent_ids.append(report['id'])
+                sent_ids.append(report['ID'])
 
             # 남은 메시지 발송
             if send_buffer:

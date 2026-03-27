@@ -14,27 +14,35 @@ class DatabaseManager:
     def _init_db(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         with self._get_connection() as conn:
+            # 컬럼명 대문자 통일 및 ATTACH_URL -> PDF_URL 변경
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS report_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title TEXT,
-                    url TEXT UNIQUE,
-                    attach_url TEXT,
-                    source TEXT,
-                    broker TEXT,
-                    sent_yn TEXT DEFAULT 'N',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                    TITLE TEXT,
+                    URL TEXT UNIQUE,
+                    PDF_URL TEXT,
+                    SOURCE TEXT,
+                    BROKER TEXT,
+                    SENT_YN TEXT DEFAULT 'N',
+                    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            
+            # 기존 테이블에 PDF_URL 컬럼이 없을 경우를 대비한 마이그레이션 (선택적)
+            try:
+                conn.execute("ALTER TABLE report_history ADD COLUMN PDF_URL TEXT")
+            except sqlite3.OperationalError:
+                pass # 이미 존재함
+                
             conn.commit()
 
-    def insert_report(self, title, url, source, broker, attach_url=None, sent_yn='N'):
+    def insert_report(self, title, url, source, broker, pdf_url=None, sent_yn='N'):
         try:
             with self._get_connection() as conn:
                 conn.execute('''
-                    INSERT INTO report_history (title, url, attach_url, source, broker, sent_yn) 
+                    INSERT INTO report_history (TITLE, URL, PDF_URL, SOURCE, BROKER, SENT_YN) 
                     VALUES (?, ?, ?, ?, ?, ?)
-                ''', (title, url, attach_url, source, broker, sent_yn))
+                ''', (title, url, pdf_url, source, broker, sent_yn))
                 conn.commit()
                 return True
         except sqlite3.IntegrityError:
@@ -46,17 +54,17 @@ class DatabaseManager:
     def get_unsent_reports(self):
         with self._get_connection() as conn:
             conn.row_factory = sqlite3.Row
-            cursor = conn.execute("SELECT * FROM report_history WHERE sent_yn = 'N' ORDER BY id ASC")
+            cursor = conn.execute("SELECT * FROM report_history WHERE SENT_YN = 'N' ORDER BY ID ASC")
             return [dict(row) for row in cursor.fetchall()]
 
     def update_sent_status(self, report_ids):
         if not report_ids: return
         with self._get_connection() as conn:
             placeholders = ','.join(['?'] * len(report_ids))
-            conn.execute(f"UPDATE report_history SET sent_yn = 'Y' WHERE id IN ({placeholders})", report_ids)
+            conn.execute(f"UPDATE report_history SET SENT_YN = 'Y' WHERE ID IN ({placeholders})", report_ids)
             conn.commit()
 
-    def update_report_attach_url(self, report_id, attach_url):
+    def update_report_pdf_url(self, report_id, pdf_url):
         with self._get_connection() as conn:
-            conn.execute("UPDATE report_history SET attach_url = ? WHERE id = ?", (attach_url, report_id))
+            conn.execute("UPDATE report_history SET PDF_URL = ? WHERE ID = ?", (pdf_url, report_id))
             conn.commit()
