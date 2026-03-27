@@ -55,3 +55,8 @@ class DatabaseManager:
             placeholders = ','.join(['?'] * len(report_ids))
             conn.execute(f"UPDATE report_history SET sent_yn = 'Y' WHERE id IN ({placeholders})", report_ids)
             conn.commit()
+
+    def update_report_attach_url(self, report_id, attach_url):
+        with self._get_connection() as conn:
+            conn.execute("UPDATE report_history SET attach_url = ? WHERE id = ?", (attach_url, report_id))
+            conn.commit()

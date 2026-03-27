@@ -154,9 +154,17 @@ class NaverReportScraper:
             last_broker = None
             
             for report in unsent:
-                # 발송 직전에 실제 PDF/원문 링크 파싱 (속도를 위해 이때만 수행)
-                pdf_url = await self._parse_pdf_url(session, report['url'])
-                display_url = pdf_url if pdf_url else report['url']
+                # 1. DB에 이미 PDF 링크가 있는지 확인
+                display_url = report.get('attach_url')
+                
+                # 2. 없다면 실제 상세 페이지 방문하여 파싱 후 DB 업데이트
+                if not display_url:
+                    display_url = await self._parse_pdf_url(session, report['url'])
+                    if display_url:
+                        self.db.update_report_attach_url(report['id'], display_url)
+                        logger.info(f"PDF URL 업데이트됨: {report['id']} -> {display_url}")
+                    else:
+                        display_url = report['url'] # PDF 추출 실패 시 원문 상세 페이지 유지
                 
                 # HTML 이스케이프 및 메시지 조립
                 esc_title = html.escape(report['title'])
