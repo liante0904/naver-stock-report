@@ -7,6 +7,10 @@ services:
     user: "1001:1001"
     restart: always
     env_file: .env
+    environment:
+      - TZ=Asia/Seoul
     volumes:
       - ~/sqlite3:/app/db
       - ~/log:/app/log
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro

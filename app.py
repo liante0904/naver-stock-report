@@ -32,17 +32,10 @@ async def run_service(scraper, db_path):
     interval = 1800  # 30분
     logger.info(f"{log_prefix}Starting Naver Stock Report Bot in SERVICE mode (Aligned to 30m)")
     
+    # 시작 시 과거 데이터 수집 (알림 없이 DB만 채움)
+    await scraper.fetch_historical_data()
+    
     while True:
-        now = datetime.datetime.now()
-        seconds_since_hour = (now.minute * 60) + now.second
-        wait_seconds = interval - (seconds_since_hour % interval)
-        
-        if wait_seconds <= 0: wait_seconds = interval
-
-        logger.info(f"Waiting {int(wait_seconds)}s until next aligned run...")
-        await asyncio.sleep(wait_seconds)
-        await asyncio.sleep(0.5)
-
         logger.info(f"--- [Loop Start: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ---")
         try:
             await scraper.run()
@@ -51,11 +44,22 @@ async def run_service(scraper, db_path):
             logger.error(f"Unexpected error during scraping: {e}")
             await asyncio.sleep(10)
 
+        now = datetime.datetime.now()
+        seconds_since_hour = (now.minute * 60) + now.second
+        wait_seconds = interval - (seconds_since_hour % interval)
+        
+        if wait_seconds <= 0: wait_seconds = interval
+
+        logger.info(f"Waiting {int(wait_seconds)}s until next aligned run...")
+        await asyncio.sleep(wait_seconds)
+
 async def run_once(scraper, db_path):
     """로컬 태스크 모드: 1회 실행"""
     log_prefix = "" if IS_PROD else "[DEV] "
     logger.info(f"{log_prefix}Starting Naver Stock Report Bot in TASK mode (Once)")
     try:
+        # 1회 실행 모드에서도 과거 데이터를 먼저 긁어온 후 실행 (이미 있으면 중복무시됨)
+        await scraper.fetch_historical_data()
         await scraper.run()
         logger.info("Scraping completed successfully.")
     except Exception as e:
