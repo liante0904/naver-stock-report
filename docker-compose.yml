@@ -1,9 +1,7 @@
 services:
   report-bot:
-    build: .
-    # ENV가 production이면 naver-stock-report-bot, 아니면 naver-stock-report-bot-dev
-    image: naver-stock-report-bot:${ENV:-dev}
-    container_name: naver-stock-report-bot${ENV_SUFFIX:-}
+    image: ghcr.io/liante0904/naver-stock-report:latest
+    container_name: naver-stock-report-bot
     user: "1001:1001"
     restart: always
     env_file: .env
@@ -12,5 +10,3 @@ services:
     volumes:
       - ~/sqlite3:/app/db
       - ~/log:/app/log
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
