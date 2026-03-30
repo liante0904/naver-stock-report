@@ -53,11 +53,21 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            mkdir -p ~/prod/naver-stock-report
-            cd ~/prod/naver-stock-report
+            mkdir -p ~/prod
+            cd ~/prod
+            # 폴더가 없거나 .git이 없으면 새로 클론
+            if [ ! -d "naver-stock-report/.git" ]; then
+              rm -rf naver-stock-report
+              git clone git@github.com:liante0904/naver-stock-report.git naver-stock-report
+            fi
+            
+            cd naver-stock-report
             git fetch origin main
             git reset --hard origin/main
             
-            # 새 이미지 풀 및 컨테이너 재시작
+            # GHCR 로그인
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # 이미지 풀 및 컨테이너 재시작
             docker-compose pull
             docker-compose up -d
