@@ -16,14 +16,29 @@ ENV = os.getenv('ENV', 'dev').lower()
 IS_PROD = ENV == 'production'
 
 # 로그 설정
+_log_handler_id = None
+_current_log_date = None
+
 def setup_logging():
+    global _log_handler_id, _current_log_date
     now_date = datetime.datetime.now().strftime("%Y%m%d")
+    
+    # 이미 해당 날짜의 핸들러가 설정되어 있다면 스킵
+    if _current_log_date == now_date:
+        return
+
+    # 기존 핸들러 제거
+    if _log_handler_id is not None:
+        logger.remove(_log_handler_id)
+
     base_log_dir = "/app/log" if IS_DOCKER else os.path.expanduser("~/log")
     log_dir = os.path.join(base_log_dir, now_date)
     os.makedirs(log_dir, exist_ok=True)
     
     log_file = os.path.join(log_dir, f"{now_date}_naver-stock-report.log")
-    logger.add(log_file, rotation="10 MB", retention="10 days", level="INFO", enqueue=True)
+    # rotation은 00:00으로 설정하되, setup_logging 호출 시점이 자정을 넘기면 즉시 교체됨
+    _log_handler_id = logger.add(log_file, rotation="00:00", retention="10 days", level="INFO", enqueue=True)
+    _current_log_date = now_date
     return log_file
 
 async def run_service(scraper, db_path):
@@ -36,6 +51,7 @@ async def run_service(scraper, db_path):
     await scraper.fetch_historical_data()
     
     while True:
+        setup_logging()  # 루프 시작 시 로그 날짜 체크
         logger.info(f"--- [Loop Start: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] ---")
         try:
             await scraper.run()
