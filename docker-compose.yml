@@ -4,14 +4,15 @@ services:
     container_name: naver-stock-report-bot-${APP_ENV:-prod}
     user: "1001:1001"
     restart: always
-    env_file: .env
+    env_file:
+      - .env
     environment:
       - APP_ENV=${APP_ENV:-prod}
       - TZ=Asia/Seoul
     volumes:
       - ./app.py:/app/app.py
       - ~/sqlite3:/app/db
-      - ~/log:/app/log
+      - ~/logs:/app/logs
     networks:
       - public-net
 
